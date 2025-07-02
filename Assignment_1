@@ -1,0 +1,126 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Candidate Name : Harish Vinod Pandit
+# MAGIC # Date : 02-June-2025
+
+# COMMAND ----------
+
+# Install required libraries
+%pip install transformers torch scikit-learn pymupdf
+
+
+
+# Import libraries
+import fitz  # PyMuPDF
+import torch
+from transformers import BertTokenizer, BertModel
+import os
+
+# COMMAND ----------
+
+# Load BERT model and tokenizer
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+model = BertModel.from_pretrained("bert-base-uncased")
+
+# COMMAND ----------
+
+# Function to get BERT embedding for a word
+def get_bert_embedding(word):
+    inputs = tokenizer(word, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**inputs)
+    embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
+    return embedding
+
+# Function to reduce embedding dimensions 
+def reduce_embedding(embedding, dims):
+    return embedding[:dims].tolist()
+
+def write_embedding_to_file(word, embedding, dbfs_path):
+    import os
+
+    # Create a temporary local file
+    local_path = f"/tmp/{os.path.basename(dbfs_path)}"
+
+    # Append to local file
+    with open(local_path, "a") as f:
+        f.write(f"{word}:" + ",".join([str(x) for x in embedding]) + "\n")
+
+    # Remove existing DBFS file if it exists
+    try:
+        dbutils.fs.rm(dbfs_path)
+    except:
+        pass  # Ignore if file doesn't exist
+
+    # Copy local file to DBFS
+    dbutils.fs.cp(f"file:{local_path}", dbfs_path)
+
+
+
+# Function to check if word exists in file
+def word_exists_in_file(word, filename):
+    if not os.path.exists(filename):
+        return False
+    with open(filename, "r") as f:
+        for line in f:
+            if line.startswith(f"{word}:"):
+                return True
+    return False
+
+
+# COMMAND ----------
+
+# Read PDF from DBFS
+pdf_path = "/dbfs/FileStore/tables/Water_pollution.pdf"
+doc = fitz.open(pdf_path)
+text = ""
+for page in doc:
+    text += page.get_text()
+
+# Tokenize and get unique words
+words = set(text.lower().split())
+words = [''.join(filter(str.isalpha, word)) for word in words]
+words = sorted(set(filter(None, words)))
+
+
+# Create embedding files
+Assesment_1
+file_8d = "/Workspace/Users/dbuser1@meteoros.ai/hvp_embeddings_8d.txt"
+# file_8d = "/dbfs/FileStore/hvp_embeddings_8d.txt"
+file_16d = "/Workspace/Users/dbuser1@meteoros.ai/hvp_embeddings_16d.txt"
+file_32d = "/Workspace/Users/dbuser1@meteoros.ai/hvp_embeddings_32d.txt"
+
+# Clear existing files
+for file in [file_8d, file_16d, file_32d]:
+    open(file, "w").close()
+
+# Generate and save embeddings
+for word in words:
+    emb = get_bert_embedding(word)
+    emb_8d = reduce_embedding(emb, 8)
+    emb_16d = reduce_embedding(emb, 16)
+    emb_32d = reduce_embedding(emb, 32)
+
+    write_embedding_to_file(word, emb_8d, file_8d)
+    write_embedding_to_file(word, emb_16d, file_16d)
+    write_embedding_to_file(word, emb_32d, file_32d)
+
+print("Embeddings generated and saved.")
+
+# COMMAND ----------
+
+
+# User input word
+user_word = "pollution"  # Replace with input() if running interactively
+
+# Search and update if not found
+for dims, file in [(8, file_8d), (16, file_16d), (32, file_32d)]:
+    if word_exists_in_file(user_word, file):
+        print(f"'{user_word}' found in {dims}D embedding file.")
+    else:
+        print(f"'{user_word}' not found in {dims}D embedding file. Generating and saving embedding...")
+        emb = get_bert_embedding(user_word)
+        reduced_emb = reduce_embedding(emb, dims)
+        write_embedding_to_file(user_word, reduced_emb, file)
+
+print('Writing Process Completed')      
