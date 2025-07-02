@@ -84,7 +84,7 @@ words = sorted(set(filter(None, words)))
 
 
 # Create embedding files
-Assesment_1
+
 file_8d = "/Workspace/Users/dbuser1@meteoros.ai/hvp_embeddings_8d.txt"
 # file_8d = "/dbfs/FileStore/hvp_embeddings_8d.txt"
 file_16d = "/Workspace/Users/dbuser1@meteoros.ai/hvp_embeddings_16d.txt"
@@ -111,7 +111,7 @@ print("Embeddings generated and saved.")
 
 
 # User input word
-user_word = "pollution"  # Replace with input() if running interactively
+user_word = "pollution"  
 
 # Search and update if not found
 for dims, file in [(8, file_8d), (16, file_16d), (32, file_32d)]:
